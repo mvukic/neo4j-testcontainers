@@ -1,37 +1,56 @@
-package com.example.demo
+package com.example.demo.base
 
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.util.TestPropertyValues
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.ConfigurableApplicationContext
-import org.springframework.test.context.ActiveProfiles
+import org.springframework.core.io.support.ResourcePatternResolver
 import org.springframework.test.context.ContextConfiguration
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.containers.Neo4jLabsPlugin
 import org.testcontainers.utility.MountableFile.forClasspathResource
+import kotlin.test.BeforeTest
 
-@ContextConfiguration(initializers = [IntegrationTestsBase.Initializer::class])
+
+@ContextConfiguration(initializers = [DatabaseIntegrationTestsBase.Initializer::class])
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@ActiveProfiles(IntegrationTestsBase.TESTING_PROFILE)
-abstract class IntegrationTestsBase {
+abstract class DatabaseIntegrationTestsBase : IntegrationTestsBase {
+
+    @Autowired
+    lateinit var resourcePatternResolver: ResourcePatternResolver
 
     @BeforeAll
-    fun beforeAll() {
-        // Copy .csv files
-        listOf("person", "address", "LIVES_AT").forEach {
-            container.copyFileToContainer(forClasspathResource("csv/$it.csv"), "$NEO4J_HOME_IMPORT/$it.csv")
-        }
+    open fun beforeAll() {
+        copyCsvFiles()
+        copyScripts()
+        loadData()
+    }
+
+    @BeforeTest
+    open fun beforeEach() {
+        loadData()
+    }
+
+    private fun copyCsvFiles() {
+        resourcePatternResolver
+            .getResources("classpath:csv/*.csv")
+            .map { it.filename }
+            .forEach {
+                container.copyFileToContainer(forClasspathResource("csv/${it}"), "$NEO4J_HOME_IMPORT/$it")
+            }
+    }
+
+    private fun copyScripts() {
         // Copy load script
         container.copyFileToContainer(forClasspathResource("data-loader.cypher"), "$NEO4J_HOME_BIN/data-loader.cypher")
         // Copy bash script
         container.copyFileToContainer(forClasspathResource("run-script.sh"), "$NEO4J_HOME_BIN/run-script.sh")
     }
 
-    @BeforeEach
-    fun beforeEach() {
-        // Clear old data and import it again
+    private fun loadData() {
+        // Clear the existing data in the database and reload new one so that each @Test starts with the fresh data
         container.execInContainer("/bin/bash", "$NEO4J_HOME_BIN/run-script.sh").also {
             println(it.stdout)
         }
@@ -43,9 +62,7 @@ abstract class IntegrationTestsBase {
             println("http://" + container.host + ":" + container.getMappedPort(7474) + "/browser?dbms=" + container.boltUrl)
 
             TestPropertyValues.of(
-                "spring.neo4j.uri=${container.boltUrl}",
-                "spring.neo4j.authentication.username=neo4j",
-                "spring.webflux.base-path=/api"
+                "spring.neo4j.uri=${container.boltUrl}"
             ).applyTo(configurableApplicationContext.environment)
         }
     }
@@ -55,8 +72,6 @@ abstract class IntegrationTestsBase {
         private const val NEO4J_HOME = "/var/lib/neo4j"
         private const val NEO4J_HOME_IMPORT = "$NEO4J_HOME/import"
         private const val NEO4J_HOME_BIN = "$NEO4J_HOME/bin"
-
-        const val TESTING_PROFILE = "integration-testing"
 
         @JvmStatic
         protected val container: Neo4jContainer<*> = Neo4jContainer("neo4j:5.2-enterprise")

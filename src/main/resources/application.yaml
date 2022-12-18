@@ -1,6 +1,12 @@
-
 spring:
+  webflux:
+    base-path: /api
   neo4j:
     uri: bolt://localhost:7687
-    username: neo4j
-    password: matija
+    authentication:
+      username: neo4j
+
+app:
+  value: normal-value
+  nested:
+    value: nested-normal-value

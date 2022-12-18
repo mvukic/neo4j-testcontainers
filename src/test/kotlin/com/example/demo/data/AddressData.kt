@@ -4,7 +4,7 @@ import com.example.demo.AddressEntity
 
 object AddressData {
 
-    val address1 = AddressEntity(
+     val address1 = AddressEntity(
         street = "Street 1",
         number = 1
     ).apply {

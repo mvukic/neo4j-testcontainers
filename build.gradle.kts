@@ -16,23 +16,15 @@ java {
 	}
 }
 
-configurations {
-	compileOnly {
-		extendsFrom(configurations.annotationProcessor.get())
-	}
-}
-
 repositories {
 	mavenCentral()
 }
-
-extra["testcontainersVersion"] = "1.17.6"
 
 dependencies {
 	// Spring Boot dependency
 	implementation("org.springframework.boot:spring-boot-starter-data-neo4j")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
-	annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+	implementation("org.springframework.boot:spring-boot-starter-security")
 
 	// Kotlin dependencies
 	implementation(kotlin("stdlib-jdk8"))
@@ -45,6 +37,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test") {
 		exclude(module = "mockito-core")
 	}
+	testImplementation("org.springframework.security:spring-security-test")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
 	testImplementation("io.projectreactor:reactor-test")
 	testImplementation(kotlin("test"))
@@ -56,7 +49,7 @@ dependencies {
 
 dependencyManagement {
     imports {
-        mavenBom("org.testcontainers:testcontainers-bom:${property("testcontainersVersion")}")
+        mavenBom("org.testcontainers:testcontainers-bom:1.17.6")
     }
 }
 

@@ -1,3 +1,10 @@
 spring:
   webflux:
     base-path: /api
+  neo4j:
+    username: neo4j
+
+app:
+  value: integration-testing-value
+  nested:
+    value: nested-integration-testing-value

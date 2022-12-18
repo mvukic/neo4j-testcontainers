@@ -1,31 +1,33 @@
 package com.example.demo
 
+import com.example.demo.base.RouterIntegrationTestsBase
 import com.example.demo.data.PersonData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import org.junit.jupiter.params.provider.ValueSource
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.web.server.LocalServerPort
-import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.security.test.context.support.WithUserDetails
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.awaitExchange
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @OptIn(ExperimentalCoroutinesApi::class)
-class PersonRouterTests : IntegrationTestsBase() {
+class PersonRouterTests : RouterIntegrationTestsBase() {
 
-    @LocalServerPort
-    private val localServerPort = 0
+
+    @BeforeTest
+    override fun beforeEach() {
+        super.beforeEach()
+    }
 
     @Test()
+    @WithUserDetails(
+        value = "integration-tests-user",
+        userDetailsServiceBeanName = "integrationTestingUserDetailService"
+    )
     fun `get all people`() = runTest {
-        val client = WebClient.builder().baseUrl("http://localhost:$localServerPort").build()
+        val client = getWebClient()
         client.get()
             .uri(BASE_PATH)
             .awaitExchange {
@@ -39,8 +41,13 @@ class PersonRouterTests : IntegrationTestsBase() {
     }
 
     @Test()
+    @WithMockUser(
+        username = "integration-tests",
+        password = "password",
+        authorities = ["USER"]
+    )
     fun `get all people with addresses`() = runTest {
-        val client = WebClient.builder().baseUrl("http://localhost:$localServerPort").build()
+        val client = getWebClient()
         client.get()
             .uri(GET_ALL_WITH_ADDRESSES_PATH)
             .awaitExchange {
@@ -55,8 +62,13 @@ class PersonRouterTests : IntegrationTestsBase() {
 
     @ParameterizedTest
     @CsvSource(value = ["P, 2", "O, 1", "A, 0"])
+    @WithMockUser(
+        username = "integration-tests",
+        password = "password",
+        authorities = ["USER"]
+    )
     fun `get all people where name starts with a prefix`(prefix: String, count: Int) = runTest {
-        val client = WebClient.builder().baseUrl("http://localhost:$localServerPort").build()
+        val client = getWebClient()
         client.get()
             .uri {
                 it.path(GET_ALL_WHERE_NAME_STARTS_WITH_PATH)
@@ -66,7 +78,7 @@ class PersonRouterTests : IntegrationTestsBase() {
             .awaitExchange { response ->
                 val body = response.awaitBodyOrNull<List<PersonModel>>()
                 assertNotNull(body)
-                assertEquals(body.size, count)
+                assertEquals(count, body.size)
             }
     }
 

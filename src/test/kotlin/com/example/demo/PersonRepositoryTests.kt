@@ -1,13 +1,15 @@
 package com.example.demo
 
+import com.example.demo.base.DatabaseIntegrationTestsBase
+import com.example.demo.data.PersonData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -15,21 +17,21 @@ import kotlin.test.assertNotNull
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonRepositoryTests(
     @Autowired private val repository: PersonRepository
-) : IntegrationTestsBase() {
+) : DatabaseIntegrationTestsBase() {
 
     @Test
     fun `Count people`() = runTest {
-        val people = repository.count().awaitSingle()
-        assertEquals(3, people)
+        val peopleCount = repository.count().awaitSingle()
+        assertEquals(PersonData.people.size.toLong(), peopleCount)
     }
 
     @Test
     fun `Count people with addresses`() = runTest {
         val people = repository.getAllWithAddresses().asFlow().toList()
-        assertEquals(3, people.size)
-        val personWithTwoAddresses = people.find { it.personId == "75e29665-69c6-4053-a195-2a26dd44ea32" }
+        assertEquals(PersonData.people.size, people.size)
+        val personWithTwoAddresses = people.find { it.personId == PersonData.person3.personId }
         assertNotNull(personWithTwoAddresses)
-        assertEquals(2, personWithTwoAddresses.addresses.size)
+        assertEquals(PersonData.people.size - 1, personWithTwoAddresses.addresses.size)
     }
 
 }
